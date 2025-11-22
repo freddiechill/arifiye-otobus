@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Arifiye - Kampüs Otobüs Saatleri</title>
+    
+    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/freddiechill/gorsel-depom/refs/heads/main/favicon.png">
+    <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/freddiechill/gorsel-depom/refs/heads/main/favicon.png">
+
+    <link href="https://api.fontshare.com/v2/css?f[]=satoshi@700,900&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Satoshi', sans-serif;
+            font-weight: 700;
+            background-color: #121212;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 10px;
+            box-sizing: border-box;
+            height: 100vh; 
+            overflow: hidden; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* SAAT VE TARİH KUTUSU (BAŞLIKSIZ DÜZEN) */
+        .clock-container {
+            background-color: #1e1e1e;
+            padding: 15px 20px;
+            border-radius: 20px;
+            border: 1px solid #333;
+            text-align: center;
+            /* Başlık kalktığı için üstten boşluk bırakalım */
+            margin-top: 60px; 
+            margin-bottom: 15px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-width: 300px;
+            flex-shrink: 0; 
+        }
+
+        #clock-time {
+            font-size: 2.2rem;
+            font-weight: 900;
+            color: #90caf9; 
+            line-height: 1;
+            margin-bottom: 2px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        #clock-date {
+            font-size: 0.85rem;
+            color: #888;
+            font-weight: 500;
+            margin-bottom: 10px;
+        }
+
+        /* ÇİFT GERİ SAYIM ALANI */
+        .timers-wrapper {
+            display: flex;
+            width: 100%;
+            justify-content: space-between;
+            gap: 10px;
+            border-top: 1px solid #333;
+            padding-top: 10px;
+        }
+
+        .timer-box {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .timer-label {
+            font-size: 0.75rem;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 2px;
+        }
+
+        .timer-value {
+            font-size: 1.1rem;
+            font-weight: 900;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Renkler */
+        .t-red { color: #ef9a9a; } /* Pastel Kırmızı */
+        .t-green { color: #a5d6a7; } /* Pastel Yeşil */
+
+
+        /* BUTONLAR */
+        .icon-btn {
+            position: fixed;
+            top: 20px; /* Biraz daha aşağı aldım */
+            z-index: 2000;
+            background-color: #333;
+            border: 1px solid #555;
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #fff;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            transition: transform 0.2s, background-color 0.2s;
+        }
+        .icon-btn:hover { background-color: #444; transform: scale(1.05); }
+        .icon-btn svg { width: 24px; height: 24px; fill: currentColor; }
+
+        .btn-list { right: 20px; }
+        .btn-map { left: 20px; }
+
+        /* LİSTE ALANI */
+        .container {
+            display: flex;
+            gap: 15px;
+            width: 100%;
+            max-width: 600px;
+            justify-content: center;
+            flex: 1; 
+            min-height: 0; 
+        }
+
+        .column {
+            background: #1e1e1e;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            width: 50%;
+            border: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; 
+            position: relative;
+        }
+
+        .column-header {
+            padding: 15px;
+            text-align: center;
+            font-size: 1.3rem;
+            font-weight: 900;
+            color: #121212;
+            flex-shrink: 0; 
+            z-index: 10;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2); 
+        }
+
+        .header-arifiye { background-color: #ef9a9a; } 
+        .header-kampus { background-color: #a5d6a7; }
+
+        ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            overflow-y: auto; 
+            flex: 1; 
+            position: relative;
+            -webkit-overflow-scrolling: touch; 
+        }
+
+        ul::-webkit-scrollbar { width: 5px; }
+        ul::-webkit-scrollbar-track { background: #1e1e1e; }
+        ul::-webkit-scrollbar-thumb { background: #444; border-radius: 10px; }
+
+        li {
+            padding: 12px;
+            text-align: center;
+            border-bottom: 1px solid #2c2c2c;
+            font-size: 1.1rem;
+        }
+
+        .highlight-red { background-color: #ffcccc !important; color: #b71c1c !important; border-left: 6px solid #b71c1c; }
+        .highlight-green { background-color: #dcedc8 !important; color: #33691e !important; border-left: 6px solid #33691e; }
+        .past-time { color: #444; text-decoration: line-through; font-weight: 400; }
+
+        /* --- MODAL (ORTAK) --- */
+        .modal-overlay {
+            display: none; 
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.96);
+            z-index: 1500;
+            flex-direction: column;
+            padding: 20px;
+            padding-top: 80px; 
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+
+        .modal-content { width: 100%; max-width: 600px; margin: 0 auto; padding-bottom: 40px; }
+        .modal-title { text-align: center; margin-bottom: 20px; font-size: 1.5rem; color: #fff; border-bottom: 1px solid #333; padding-bottom: 10px; }
+
+        /* TABLO STİLLERİ */
+        .modal-grid-container { display: flex; flex-direction: column; gap: 30px; }
+        .table-section { background: #1e1e1e; border-radius: 10px; border: 1px solid #333; overflow: hidden; flex: 1; }
+        .section-title { background: #333; color: #fff; padding: 10px; text-align: center; font-size: 1.1rem; font-weight: bold; }
+        .timetable-grid { display: grid; grid-template-columns: 1fr 1fr; }
+        .timetable-col { border-right: 1px solid #333; }
+        .timetable-col:last-child { border-right: none; }
+        .sub-header { background: #252525; padding: 8px; text-align: center; font-size: 0.9rem; color: #aaa; border-bottom: 1px solid #333; }
+        .time-row { display: block; text-align: center; padding: 8px; font-size: 1rem; border-bottom: 1px solid #2a2a2a; color: #888; }
+        .modal-highlight-red { background-color: #ffcccc; color: #b71c1c; font-weight: 900; border-left: 4px solid #b71c1c; }
+        .modal-highlight-green { background-color: #dcedc8; color: #33691e; font-weight: 900; border-left: 4px solid #33691e; }
+
+        /* HARİTA STİLLERİ */
+        .map-visual-container {
+            background: #1e1e1e;
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid #333;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .map-note { font-size: 0.85rem; color: #888; margin-bottom: 25px; font-weight: 500; text-align: center; }
+        .route-track-wrapper { position: relative; width: 100%; height: 40px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
+        .route-line-bg { width: 100%; height: 6px; background: #333; border-radius: 3px; position: relative; }
+        .point-dot { position: absolute; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; border-radius: 50%; border: 3px solid #1e1e1e; z-index: 2; }
+        .dot-arifiye { left: 0; background-color: #ef9a9a; }
+        .dot-kampus { right: 0; background-color: #a5d6a7; }
+        .point-label { position: absolute; top: -25px; font-size: 0.9rem; font-weight: bold; }
+        .label-arifiye { left: 0; color: #ef9a9a; transform: translateX(0); }
+        .label-kampus { right: 0; color: #a5d6a7; transform: translateX(0); }
+        
+        .user-arrow-wrapper { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 34px; height: 34px; z-index: 3; transition: left 1s ease; display: flex; align-items: center; justify-content: center; }
+        .user-arrow-icon { width: 100%; height: 100%; color: #ce93d8; fill: currentColor; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); transition: transform 0.5s ease; }
+
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; }
+        .info-box { background: #252525; padding: 15px; border-radius: 12px; text-align: center; border: 1px solid #333; }
+        .info-title { color: #888; font-size: 0.8rem; margin-bottom: 5px; }
+        .info-value { font-size: 1.1rem; font-weight: 900; color: #fff; }
+        .text-arifiye { color: #ef9a9a; }
+        .text-kampus { color: #a5d6a7; }
+
+        @media (orientation: landscape) {
+            .clock-container { margin-bottom: 10px; padding: 5px; margin-top: 10px; }
+            .modal-content { max-width: 95% !important; }
+            .modal-grid-container { flex-direction: row; align-items: flex-start; gap: 20px; }
+            #clock-time { font-size: 1.5rem; }
+        }
+        @media (min-width: 768px) {
+            body { padding: 25px; }
+            .icon-btn { top: 25px; }
+            .btn-list { right: 25px; }
+            .btn-map { left: 25px; }
+            .modal-content { max-width: 90% !important; }
+            .modal-grid-container { flex-direction: row; gap: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <button class="icon-btn btn-map" onclick="toggleMapModal()" title="Konum ve Mesafe">
+        <svg id="icon-map" viewBox="0 0 24 24">
+            <path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"/>
+        </svg>
+        <svg id="icon-map-off" viewBox="0 0 24 24" style="display: none;">
+            <path d="M15 19l-6-2.11V5l6 2.11V19zM20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5z"/>
+            <path d="M2 2l20 20" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+        </svg>
+    </button>
+
+    <button class="icon-btn btn-list" onclick="toggleTableModal()" id="toggleBtn" title="Tüm Tablo">
+        <svg id="icon-eye" viewBox="0 0 24 24">
+            <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+        </svg>
+        <svg id="icon-eye-off" viewBox="0 0 24 24" style="display: none;">
+            <path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.44-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46A11.804 11.804 0 0 0 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2z"/>
+        </svg>
+    </button>
+
+    <div class="clock-container">
+        <div id="clock-time">00:00:00</div>
+        <div id="clock-date">Yükleniyor...</div>
+        
+        <div class="timers-wrapper">
+            <div class="timer-box">
+                <div class="timer-label t-red">Arifiye'den</div>
+                <div class="timer-value t-red" id="timer-arifiye">--:--</div>
+            </div>
+            <div class="timer-box">
+                <div class="timer-label t-green">Kampüs'ten</div>
+                <div class="timer-value t-green" id="timer-kampus">--:--</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="column">
+            <div class="column-header header-arifiye">ARİFİYE</div>
+            <ul id="list-arifiye" data-scrolled="false"></ul>
+        </div>
+        <div class="column">
+            <div class="column-header header-kampus">KAMPÜS</div>
+            <ul id="list-kampus" data-scrolled="false"></ul>
+        </div>
+    </div>
+
+    <div id="fullTableModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-title">Tüm Sefer Saatleri</div>
+            
+            <div class="modal-grid-container">
+                <div class="table-section">
+                    <div class="section-title">HAFTA İÇİ</div>
+                    <div class="timetable-grid">
+                        <div class="timetable-col"><div class="sub-header" style="color:#ef9a9a">Arifiye</div><div id="modal-weekday-arifiye"></div></div>
+                        <div class="timetable-col"><div class="sub-header" style="color:#a5d6a7">Kampüs</div><div id="modal-weekday-kampus"></div></div>
+                    </div>
+                </div>
+                <div class="table-section">
+                    <div class="section-title">HAFTA SONU</div>
+                    <div class="timetable-grid">
+                        <div class="timetable-col"><div class="sub-header" style="color:#ef9a9a">Arifiye</div><div id="modal-weekend-arifiye"></div></div>
+                        <div class="timetable-col"><div class="sub-header" style="color:#a5d6a7">Kampüs</div><div id="modal-weekend-kampus"></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="mapModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-title">Canlı Konum Durumu</div>
+            
+            <div class="map-visual-container">
+                <div class="map-note">Konumunuz hat üzerinde gösterilir</div>
+                <div class="route-track-wrapper">
+                    <div class="point-label label-arifiye">ARİFİYE</div>
+                    <div class="point-label label-kampus">KAMPÜS</div>
+                    
+                    <div class="route-line-bg">
+                        <div class="point-dot dot-arifiye"></div>
+                        <div class="point-dot dot-kampus"></div>
+                        <div class="user-arrow-wrapper" id="userArrowWrapper" style="left: 50%;">
+                            <svg class="user-arrow-icon" id="userArrowIcon" viewBox="0 0 24 24"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-grid">
+                <div class="info-box">
+                    <div class="info-title">Arifiye'ye Mesafe</div>
+                    <div class="info-value text-arifiye" id="dist-arifiye">Aranıyor...</div>
+                    <div class="info-title" style="margin-top: 5px;">Tahmini Süre</div>
+                    <div class="info-value" id="time-arifiye">-- dk</div>
+                </div>
+                <div class="info-box">
+                    <div class="info-title">Kampüs'e Mesafe</div>
+                    <div class="info-value text-kampus" id="dist-kampus">Aranıyor...</div>
+                    <div class="info-title" style="margin-top: 5px;">Tahmini Süre</div>
+                    <div class="info-value" id="time-kampus">-- dk</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const data = {
+        weekday: {
+            arifiye: ["07:20", "07:35", "07:50", "08:00", "08:10", "08:20", "08:30", "08:40", "08:50", "09:00", "09:20", "09:40", "10:00", "10:20", "10:40", "11:00", "11:20", "11:40", "12:00", "12:20", "12:40", "13:00", "13:20", "13:40", "14:00", "14:20", "14:40", "15:00", "15:20", "15:40", "16:00", "16:15", "16:30", "16:45", "17:00", "17:15", "17:30", "17:45", "18:00", "18:15", "18:30", "18:45", "19:00", "19:15", "19:30", "19:45", "20:00", "20:20", "20:40", "21:00", "21:20", "21:40"],
+            kampus: ["07:50", "08:05", "08:20", "08:30", "08:40", "08:50", "09:00", "09:10", "09:20", "09:30", "10:00", "10:20", "10:40", "11:00", "11:20", "11:40", "12:00", "12:20", "12:40", "13:00", "13:20", "13:40", "14:00", "14:20", "14:40", "15:00", "15:20", "15:40", "16:00", "16:20", "16:40", "17:00", "17:15", "17:30", "17:45", "18:00", "18:15", "18:30", "18:45", "19:00", "19:20", "19:40", "20:00", "20:20", "20:40", "21:00", "21:20", "21:40", "22:00", "22:20", "22:40", "23:00"]
+        },
+        weekend: { 
+            arifiye: ["08:00", "09:00", "10:00", "11:00", "12:00", "12:40", "13:25", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30", "20:00", "20:30", "21:00", "21:20", "21:40"],
+            kampus: ["08:30", "09:30", "10:30", "11:30", "12:20", "13:05", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30", "20:00", "20:30", "21:00", "21:25", "21:45", "22:00"]
+        }
+    };
+
+    const LOC_ARIFIYE = { lat: 40.7149820, lon: 30.3593559 };
+    const LOC_KAMPUS = { lat: 40.7406901, lon: 30.3287539 };
+    const BUS_SPEED_KMH = 30; // Ortalama hız gerçekçilik için düşürüldü (30km/h)
+    let prevDistToKampus = null;
+
+    function getMinutes(timeStr) {
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        return hours * 60 + minutes;
+    }
+
+    function updateClock() {
+        const now = new Date();
+        document.getElementById('clock-date').innerText = now.toLocaleDateString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        document.getElementById('clock-time').innerText = now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        
+        updateSchedule(now); 
+    }
+
+    function updateSchedule(now) {
+        const day = now.getDay(); 
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        let dayType = (day === 0 || day === 6) ? 'weekend' : 'weekday';
+
+        renderList('list-arifiye', data[dayType].arifiye, currentMinutes, 'highlight-red');
+        renderList('list-kampus', data[dayType].kampus, currentMinutes, 'highlight-green');
+
+        const nextArifiyeMin = getNextBusMinutes(data[dayType].arifiye, currentMinutes);
+        updateTimerDisplay('timer-arifiye', nextArifiyeMin, now);
+
+        const nextKampusMin = getNextBusMinutes(data[dayType].kampus, currentMinutes);
+        updateTimerDisplay('timer-kampus', nextKampusMin, now);
+    }
+
+    function getNextBusMinutes(timesArray, currentTotalMinutes) {
+        for (let timeStr of timesArray) {
+            const tMin = getMinutes(timeStr);
+            if (tMin > currentTotalMinutes) {
+                return tMin;
+            }
+        }
+        return null; 
+    }
+
+    function updateTimerDisplay(elementId, targetMinutes, nowObj) {
+        const el = document.getElementById(elementId);
+        if (targetMinutes === null) {
+            el.innerText = "Bitti";
+            return;
+        }
+
+        const targetDate = new Date(nowObj.getTime());
+        targetDate.setHours(Math.floor(targetMinutes / 60), targetMinutes % 60, 0, 0);
+
+        const diffMs = targetDate - nowObj;
+        if (diffMs < 0) {
+            el.innerText = "Geliyor...";
+            return;
+        }
+
+        const h = Math.floor(diffMs / (1000 * 60 * 60));
+        const m = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+        const s = Math.floor((diffMs % (1000 * 60)) / 1000);
+
+        let text = "";
+        if (h > 0) text += `${h}s `;
+        text += `${m}dk ${s}sn`;
+        el.innerText = text;
+    }
+
+    function renderList(elementId, timesArray, currentMinutes, highlightClass) {
+        const list = document.getElementById(elementId);
+        if (list.children.length === 0) {
+            timesArray.forEach(time => {
+                const li = document.createElement('li');
+                li.innerText = time;
+                list.appendChild(li);
+            });
+        }
+        let nextFound = false;
+        const items = list.children;
+        let targetLi = null;
+        for (let i = 0; i < items.length; i++) {
+            const li = items[i];
+            const timeMinutes = getMinutes(li.innerText);
+            li.className = ''; 
+            if (timeMinutes < currentMinutes) li.classList.add('past-time');
+            else if (!nextFound) {
+                li.classList.add(highlightClass);
+                nextFound = true;
+                targetLi = li;
+            }
+        }
+        if (targetLi && list.getAttribute('data-scrolled') === 'false') {
+            setTimeout(() => {
+                const scrollPos = targetLi.offsetTop - list.clientHeight / 2 + targetLi.clientHeight / 2;
+                list.scrollTo({ top: scrollPos, behavior: 'smooth' });
+                list.setAttribute('data-scrolled', 'true');
+            }, 300);
+        }
+    }
+
+    function toggleTableModal() {
+        const modal = document.getElementById('fullTableModal');
+        const eyeIcon = document.getElementById('icon-eye');
+        const eyeOffIcon = document.getElementById('icon-eye-off');
+        if (modal.style.display === 'flex') {
+            modal.style.display = 'none';
+            eyeIcon.style.display = 'block';
+            eyeOffIcon.style.display = 'none';
+        } else {
+            modal.style.display = 'flex';
+            eyeIcon.style.display = 'none';
+            eyeOffIcon.style.display = 'block';
+            fillModalTables(); 
+        }
+    }
+
+    function toggleMapModal() {
+        const modal = document.getElementById('mapModal');
+        const mapIcon = document.getElementById('icon-map');
+        const mapOffIcon = document.getElementById('icon-map-off');
+
+        if (modal.style.display === 'flex') {
+            modal.style.display = 'none';
+            mapIcon.style.display = 'block';
+            mapOffIcon.style.display = 'none';
+        } else {
+            modal.style.display = 'flex';
+            mapIcon.style.display = 'none';
+            mapOffIcon.style.display = 'block';
+            startLocationTracking(); 
+        }
+    }
+
+    function fillModalTables() {
+        const now = new Date();
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        const day = now.getDay();
+        const isWeekend = (day === 0 || day === 6);
+        const fillSection = (targetId, array, colorClass, shouldHighlight) => {
+            const container = document.getElementById(targetId);
+            container.innerHTML = ''; 
+            let nextFound = false;
+            array.forEach(t => {
+                const div = document.createElement('div');
+                div.className = 'time-row';
+                div.innerText = t;
+                if (shouldHighlight) {
+                    const tMin = getMinutes(t);
+                    if (tMin >= currentMinutes && !nextFound) {
+                        div.className += ' ' + colorClass;
+                        nextFound = true;
+                    }
+                }
+                container.appendChild(div);
+            });
+        };
+        fillSection('modal-weekday-arifiye', data.weekday.arifiye, 'modal-highlight-red', !isWeekend);
+        fillSection('modal-weekday-kampus', data.weekday.kampus, 'modal-highlight-green', !isWeekend);
+        fillSection('modal-weekend-arifiye', data.weekend.arifiye, 'modal-highlight-red', isWeekend);
+        fillSection('modal-weekend-kampus', data.weekend.kampus, 'modal-highlight-green', isWeekend);
+    }
+
+    /* HARİTA VE KONUM JS (DÜZELTİLMİŞ HESAPLAMA) */
+    function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+        const R = 6371; 
+        const dLat = deg2rad(lat2 - lat1);
+        const dLon = deg2rad(lon2 - lon1);
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon/2) * Math.sin(dLon/2); 
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+        
+        // DÜZELTME FAKTÖRÜ: Gerçek yol, kuş uçuşundan yaklaşık 1.4 kat daha uzundur.
+        const d = R * c * 1.4; 
+        return d;
+    }
+    function deg2rad(deg) { return deg * (Math.PI/180); }
+
+    function startLocationTracking() {
+        if (navigator.geolocation) {
+            navigator.geolocation.watchPosition(updateUserPosition, showError, { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 });
+        } else {
+            document.getElementById('dist-arifiye').innerText = "GPS Yok";
+        }
+    }
+
+    function updateUserPosition(position) {
+        const userLat = position.coords.latitude;
+        const userLon = position.coords.longitude;
+        const distToArifiye = getDistanceFromLatLonInKm(userLat, userLon, LOC_ARIFIYE.lat, LOC_ARIFIYE.lon);
+        const distToKampus = getDistanceFromLatLonInKm(userLat, userLon, LOC_KAMPUS.lat, LOC_KAMPUS.lon);
+        
+        document.getElementById('dist-arifiye').innerText = distToArifiye.toFixed(1) + " km";
+        document.getElementById('dist-kampus').innerText = distToKampus.toFixed(1) + " km";
+        
+        // Hız varsa onu kullan, yoksa ortalama (30kmh)
+        const speed = (position.coords.speed && position.coords.speed > 0) ? (position.coords.speed * 3.6) : BUS_SPEED_KMH;
+        
+        const timeArifiye = Math.max(Math.round((distToArifiye / speed) * 60), 1); // En az 1 dk
+        const timeKampus = Math.max(Math.round((distToKampus / speed) * 60), 1);
+
+        document.getElementById('time-arifiye').innerText = timeArifiye + " dk";
+        document.getElementById('time-kampus').innerText = timeKampus + " dk";
+
+        let percentage = (distToArifiye / (distToArifiye + distToKampus)) * 100;
+        if (percentage < 0) percentage = 0;
+        if (percentage > 100) percentage = 100;
+        document.getElementById('userArrowWrapper').style.left = percentage + "%";
+
+        const arrowIcon = document.getElementById('userArrowIcon');
+        if (prevDistToKampus !== null) {
+            const delta = distToKampus - prevDistToKampus;
+            if (Math.abs(delta) > 0.002) { // Hassasiyet
+                if (distToKampus < prevDistToKampus) arrowIcon.style.transform = 'rotate(90deg)';
+                else arrowIcon.style.transform = 'rotate(-90deg)';
+            }
+        } else {
+            arrowIcon.style.transform = 'rotate(90deg)';
+        }
+        prevDistToKampus = distToKampus;
+    }
+
+    function showError(error) {
+        let msg = "";
+        switch(error.code) {
+            case error.PERMISSION_DENIED: msg = "İzin Verilmedi"; break;
+            case error.POSITION_UNAVAILABLE: msg = "Konum Yok"; break;
+            case error.TIMEOUT: msg = "Zaman Aşımı"; break;
+            default: msg = "Hata"; break;
+        }
+        document.getElementById('dist-arifiye').innerText = msg;
+        document.getElementById('dist-kampus').innerText = msg;
+    }
+
+    updateClock();
+    setInterval(updateClock, 1000);
+</script>
+
+</body>
+</html>
