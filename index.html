@@ -11,6 +11,12 @@
     <link href="https://api.fontshare.com/v2/css?f[]=satoshi@700,900&display=swap" rel="stylesheet">
 
     <style>
+        /* MAVİ TIKLAMA EFEKTİNİ KALDIRMA */
+        * {
+            -webkit-tap-highlight-color: transparent;
+            outline: none;
+        }
+
         body {
             font-family: 'Satoshi', sans-serif;
             font-weight: 700;
@@ -26,14 +32,13 @@
             align-items: center;
         }
 
-        /* SAAT VE TARİH KUTUSU (BAŞLIKSIZ DÜZEN) */
+        /* SAAT VE TARİH KUTUSU */
         .clock-container {
             background-color: #1e1e1e;
             padding: 15px 20px;
             border-radius: 20px;
             border: 1px solid #333;
             text-align: center;
-            /* Başlık kalktığı için üstten boşluk bırakalım */
             margin-top: 60px; 
             margin-bottom: 15px; 
             box-shadow: 0 4px 15px rgba(0,0,0,0.4);
@@ -93,14 +98,14 @@
         }
 
         /* Renkler */
-        .t-red { color: #ef9a9a; } /* Pastel Kırmızı */
-        .t-green { color: #a5d6a7; } /* Pastel Yeşil */
+        .t-red { color: #ef9a9a; } 
+        .t-green { color: #a5d6a7; } 
 
 
         /* BUTONLAR */
         .icon-btn {
             position: fixed;
-            top: 20px; /* Biraz daha aşağı aldım */
+            top: 20px; 
             z-index: 2000;
             background-color: #333;
             border: 1px solid #555;
@@ -116,6 +121,7 @@
             transition: transform 0.2s, background-color 0.2s;
         }
         .icon-btn:hover { background-color: #444; transform: scale(1.05); }
+        .icon-btn:active { transform: scale(0.95); } 
         .icon-btn svg { width: 24px; height: 24px; fill: currentColor; }
 
         .btn-list { right: 20px; }
@@ -243,6 +249,28 @@
         .text-arifiye { color: #ef9a9a; }
         .text-kampus { color: #a5d6a7; }
 
+        /* BAŞLAT/BİTİR BUTONU DÜZENLEMESİ */
+        .start-btn {
+            background-color: #4caf50; /* Yeşil */
+            color: #000; /* Siyah Yazı */
+            border: none;
+            padding: 10px 25px;
+            border-radius: 30px;
+            font-weight: 900;
+            font-family: 'Satoshi', sans-serif;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transition: transform 0.2s, background-color 0.3s;
+            display: block; /* Blok yaparak ortalamaya izin ver */
+            margin: 0 auto 20px auto; /* Ortala ve alt boşluk bırak */
+            font-size: 1rem;
+        }
+        .start-btn.active { 
+            background-color: #f44336; /* Kırmızı */
+            color: #000; /* Siyah Yazı */
+        } 
+        .start-btn:active { transform: scale(0.95); }
+
         @media (orientation: landscape) {
             .clock-container { margin-bottom: 10px; padding: 5px; margin-top: 10px; }
             .modal-content { max-width: 95% !important; }
@@ -334,8 +362,10 @@
         <div class="modal-content">
             <div class="modal-title">Canlı Konum Durumu</div>
             
+            <button id="tripBtn" class="start-btn" onclick="toggleTrip()">Yolculuğu Başlat</button>
+
             <div class="map-visual-container">
-                <div class="map-note">Konumunuz hat üzerinde gösterilir</div>
+                <div class="map-note">Başlat'a bastığınızda süre hesaplanır</div>
                 <div class="route-track-wrapper">
                     <div class="point-label label-arifiye">ARİFİYE</div>
                     <div class="point-label label-kampus">KAMPÜS</div>
@@ -353,13 +383,13 @@
             <div class="info-grid">
                 <div class="info-box">
                     <div class="info-title">Arifiye'ye Mesafe</div>
-                    <div class="info-value text-arifiye" id="dist-arifiye">Aranıyor...</div>
+                    <div class="info-value text-arifiye" id="dist-arifiye">-- km</div>
                     <div class="info-title" style="margin-top: 5px;">Tahmini Süre</div>
                     <div class="info-value" id="time-arifiye">-- dk</div>
                 </div>
                 <div class="info-box">
                     <div class="info-title">Kampüs'e Mesafe</div>
-                    <div class="info-value text-kampus" id="dist-kampus">Aranıyor...</div>
+                    <div class="info-value text-kampus" id="dist-kampus">-- km</div>
                     <div class="info-title" style="margin-top: 5px;">Tahmini Süre</div>
                     <div class="info-value" id="time-kampus">-- dk</div>
                 </div>
@@ -381,8 +411,10 @@
 
     const LOC_ARIFIYE = { lat: 40.7149820, lon: 30.3593559 };
     const LOC_KAMPUS = { lat: 40.7406901, lon: 30.3287539 };
-    const BUS_SPEED_KMH = 30; // Ortalama hız gerçekçilik için düşürüldü (30km/h)
+    const BUS_SPEED_KMH = 30; 
     let prevDistToKampus = null;
+    let isTracking = false;
+    let watchId = null;
 
     function getMinutes(timeStr) {
         const [hours, minutes] = timeStr.split(':').map(Number);
@@ -509,7 +541,6 @@
             modal.style.display = 'flex';
             mapIcon.style.display = 'none';
             mapOffIcon.style.display = 'block';
-            startLocationTracking(); 
         }
     }
 
@@ -542,7 +573,7 @@
         fillSection('modal-weekend-kampus', data.weekend.kampus, 'modal-highlight-green', isWeekend);
     }
 
-    /* HARİTA VE KONUM JS (DÜZELTİLMİŞ HESAPLAMA) */
+    /* HARİTA VE KONUM JS */
     function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
         const R = 6371; 
         const dLat = deg2rad(lat2 - lat1);
@@ -550,52 +581,75 @@
         const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon/2) * Math.sin(dLon/2); 
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
         
-        // DÜZELTME FAKTÖRÜ: Gerçek yol, kuş uçuşundan yaklaşık 1.4 kat daha uzundur.
-        const d = R * c * 1.4; 
+        const d = R * c * 1.4; // Düzeltme katsayısı (kus uçuşu vs karayolu)
         return d;
     }
     function deg2rad(deg) { return deg * (Math.PI/180); }
 
-    function startLocationTracking() {
-        if (navigator.geolocation) {
-            navigator.geolocation.watchPosition(updateUserPosition, showError, { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 });
+    function toggleTrip() {
+        const btn = document.getElementById('tripBtn');
+        if(!isTracking) {
+            // BAŞLAT
+            isTracking = true;
+            btn.innerText = "Yolculuğu Bitir";
+            btn.classList.add('active');
+            if (navigator.geolocation) {
+                watchId = navigator.geolocation.watchPosition(updateUserPosition, showError, { enableHighAccuracy: true, maximumAge: 5000 });
+            } else {
+                alert("GPS desteklenmiyor.");
+            }
         } else {
-            document.getElementById('dist-arifiye').innerText = "GPS Yok";
+            // BİTİR
+            isTracking = false;
+            btn.innerText = "Yolculuğu Başlat";
+            btn.classList.remove('active');
+            if(watchId) navigator.geolocation.clearWatch(watchId);
+            // Sıfırla
+            document.getElementById('time-arifiye').innerText = "-- dk";
+            document.getElementById('time-kampus').innerText = "-- dk";
         }
     }
 
     function updateUserPosition(position) {
+        if(!isTracking) return;
+
         const userLat = position.coords.latitude;
         const userLon = position.coords.longitude;
+        
         const distToArifiye = getDistanceFromLatLonInKm(userLat, userLon, LOC_ARIFIYE.lat, LOC_ARIFIYE.lon);
         const distToKampus = getDistanceFromLatLonInKm(userLat, userLon, LOC_KAMPUS.lat, LOC_KAMPUS.lon);
         
         document.getElementById('dist-arifiye').innerText = distToArifiye.toFixed(1) + " km";
         document.getElementById('dist-kampus').innerText = distToKampus.toFixed(1) + " km";
         
-        // Hız varsa onu kullan, yoksa ortalama (30kmh)
-        const speed = (position.coords.speed && position.coords.speed > 0) ? (position.coords.speed * 3.6) : BUS_SPEED_KMH;
+        // AKILLI TAHMİN MANTIĞI
+        let currentSpeed = position.coords.speed ? (position.coords.speed * 3.6) : 0; // m/s -> km/h
         
-        const timeArifiye = Math.max(Math.round((distToArifiye / speed) * 60), 1); // En az 1 dk
-        const timeKampus = Math.max(Math.round((distToKampus / speed) * 60), 1);
+        // Eğer duruyorsa veya hız verisi yoksa ortalama 35 km/h varsay (15km'yi ~25dk gibi)
+        let calcSpeed = currentSpeed;
+        if (calcSpeed < 5) calcSpeed = 35; 
+
+        const timeArifiye = Math.ceil((distToArifiye / calcSpeed) * 60); 
+        const timeKampus = Math.ceil((distToKampus / calcSpeed) * 60);
 
         document.getElementById('time-arifiye').innerText = timeArifiye + " dk";
         document.getElementById('time-kampus').innerText = timeKampus + " dk";
 
-        let percentage = (distToArifiye / (distToArifiye + distToKampus)) * 100;
-        if (percentage < 0) percentage = 0;
-        if (percentage > 100) percentage = 100;
+        // OK KONUMU VE YÖNÜ
+        let totalDist = distToArifiye + distToKampus;
+        let percentage = (distToArifiye / totalDist) * 100;
+        
+        if (percentage < 5) percentage = 5; 
+        if (percentage > 95) percentage = 95;
+        
         document.getElementById('userArrowWrapper').style.left = percentage + "%";
 
         const arrowIcon = document.getElementById('userArrowIcon');
         if (prevDistToKampus !== null) {
             const delta = distToKampus - prevDistToKampus;
-            if (Math.abs(delta) > 0.002) { // Hassasiyet
-                if (distToKampus < prevDistToKampus) arrowIcon.style.transform = 'rotate(90deg)';
-                else arrowIcon.style.transform = 'rotate(-90deg)';
-            }
-        } else {
-            arrowIcon.style.transform = 'rotate(90deg)';
+            // delta negatifse kampüse yaklaşıyor (Sağa)
+            if (delta < -0.005) arrowIcon.style.transform = 'rotate(90deg)'; 
+            else if (delta > 0.005) arrowIcon.style.transform = 'rotate(-90deg)'; // Sola (Arifiye)
         }
         prevDistToKampus = distToKampus;
     }
@@ -603,13 +657,12 @@
     function showError(error) {
         let msg = "";
         switch(error.code) {
-            case error.PERMISSION_DENIED: msg = "İzin Verilmedi"; break;
+            case error.PERMISSION_DENIED: msg = "İzin Yok"; break;
             case error.POSITION_UNAVAILABLE: msg = "Konum Yok"; break;
             case error.TIMEOUT: msg = "Zaman Aşımı"; break;
             default: msg = "Hata"; break;
         }
         document.getElementById('dist-arifiye').innerText = msg;
-        document.getElementById('dist-kampus').innerText = msg;
     }
 
     updateClock();
