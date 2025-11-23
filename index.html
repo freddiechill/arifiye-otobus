@@ -126,8 +126,8 @@
 
         .btn-map { left: 20px; }
         
-        /* YENİLEME BUTONU KONUMU */
-        .btn-refresh { left: 75px; } /* 20px (sol) + 45px (genişlik) + 10px (boşluk) */
+        /* YENİLEME BUTONU KONUMU (Haritanın yanında) */
+        .btn-refresh { left: 75px; } 
         
         .btn-list { right: 20px; }
 
@@ -276,21 +276,6 @@
         } 
         .start-btn:active { transform: scale(0.95); }
         
-        /* GOOGLE MAPS BUTONU */
-        .gmaps-link {
-            display: block;
-            margin: 10px auto;
-            text-align: center;
-            color: #90caf9;
-            text-decoration: none;
-            font-size: 0.9rem;
-            border: 1px solid #333;
-            padding: 8px 15px;
-            border-radius: 20px;
-            width: fit-content;
-            background: rgba(0,0,0,0.3);
-        }
-
         @media (orientation: landscape) {
             .clock-container { margin-bottom: 10px; padding: 5px; margin-top: 10px; }
             .modal-content { max-width: 95% !important; }
@@ -301,7 +286,7 @@
             body { padding: 25px; }
             .icon-btn { top: 25px; }
             .btn-map { left: 25px; }
-            .btn-refresh { left: 85px; } /* Masaüstünde biraz daha aralıklı */
+            .btn-refresh { left: 85px; } 
             .btn-list { right: 25px; }
             .modal-content { max-width: 90% !important; }
             .modal-grid-container { flex-direction: row; gap: 20px; }
@@ -419,9 +404,6 @@
                     <div class="info-value" id="time-kampus">-- dk</div>
                 </div>
             </div>
-            
-            <a id="gmaps-link" href="#" target="_blank" class="gmaps-link" style="display:none;">Google Haritalar'da Aç (Kesin Trafik)</a>
-
         </div>
     </div>
 
@@ -662,15 +644,6 @@
         document.getElementById('time-arifiye').innerText = timeArifiye + " dk";
         document.getElementById('time-kampus').innerText = timeKampus + " dk";
         
-        // Google Maps Linkini Güncelle
-        const gmapsLink = document.getElementById('gmaps-link');
-        if (distToArifiye < distToKampus) {
-             gmapsLink.href = `https://www.google.com/maps/dir/?api=1&origin=${userLat},${userLon}&destination=${LOC_KAMPUS.lat},${LOC_KAMPUS.lon}&travelmode=driving`;
-        } else {
-             gmapsLink.href = `https://www.google.com/maps/dir/?api=1&origin=${userLat},${userLon}&destination=${LOC_ARIFIYE.lat},${LOC_ARIFIYE.lon}&travelmode=driving`;
-        }
-        gmapsLink.style.display = 'block';
-
         // OK KONUMU
         let totalDist = distToArifiye + distToKampus;
         let percentage = (distToArifiye / totalDist) * 100;
