@@ -124,8 +124,13 @@
         .icon-btn:active { transform: scale(0.95); } 
         .icon-btn svg { width: 24px; height: 24px; fill: currentColor; }
 
-        .btn-list { right: 20px; }
         .btn-map { left: 20px; }
+        
+        /* YENİLEME BUTONU KONUMU */
+        .btn-refresh { left: 75px; } /* 20px (sol) + 45px (genişlik) + 10px (boşluk) */
+        
+        .btn-list { right: 20px; }
+
 
         /* LİSTE ALANI */
         .container {
@@ -173,17 +178,10 @@
             flex: 1; 
             position: relative;
             -webkit-overflow-scrolling: touch; 
-            
-            /* Scrollbar Gizleme (Firefox) */
             scrollbar-width: none; 
-            /* Scrollbar Gizleme (IE/Edge) */
             -ms-overflow-style: none; 
         }
-
-        /* Scrollbar Gizleme (Chrome/Safari/Opera) */
-        ul::-webkit-scrollbar { 
-            display: none; 
-        }
+        ul::-webkit-scrollbar { display: none; }
 
         li {
             padding: 12px;
@@ -302,8 +300,9 @@
         @media (min-width: 768px) {
             body { padding: 25px; }
             .icon-btn { top: 25px; }
-            .btn-list { right: 25px; }
             .btn-map { left: 25px; }
+            .btn-refresh { left: 85px; } /* Masaüstünde biraz daha aralıklı */
+            .btn-list { right: 25px; }
             .modal-content { max-width: 90% !important; }
             .modal-grid-container { flex-direction: row; gap: 20px; }
         }
@@ -319,6 +318,10 @@
             <path d="M15 19l-6-2.11V5l6 2.11V19zM20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5z"/>
             <path d="M2 2l20 20" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
         </svg>
+    </button>
+
+    <button class="icon-btn btn-refresh" onclick="window.location.reload()" title="Sayfayı Yenile">
+        <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
     </button>
 
     <button class="icon-btn btn-list" onclick="toggleTableModal()" id="toggleBtn" title="Tüm Tablo">
@@ -387,7 +390,7 @@
             <button id="tripBtn" class="start-btn" onclick="toggleTrip()">Yolculuğu Başlat</button>
 
             <div class="map-visual-container">
-                <div class="map-note">Konumunuz hat üzerinde gösterilir</div>
+                <div class="map-note">Başlat'a bastığınızda süre hesaplanır</div>
                 <div class="route-track-wrapper">
                     <div class="point-label label-arifiye">ARİFİYE</div>
                     <div class="point-label label-kampus">KAMPÜS</div>
@@ -647,8 +650,9 @@
         document.getElementById('dist-arifiye').innerText = distToArifiye.toFixed(1) + " km";
         document.getElementById('dist-kampus').innerText = distToKampus.toFixed(1) + " km";
         
-        // AKILLI TAHMİN MANTIĞI (Hız 5'in altındaysa ortalamayı kullan)
+        // AKILLI TAHMİN
         let currentSpeed = position.coords.speed ? (position.coords.speed * 3.6) : 0; // m/s -> km/h
+        
         let calcSpeed = currentSpeed;
         if (calcSpeed < 5) calcSpeed = 35; 
 
@@ -660,12 +664,9 @@
         
         // Google Maps Linkini Güncelle
         const gmapsLink = document.getElementById('gmaps-link');
-        // En yakın durağa göre hedef belirle
         if (distToArifiye < distToKampus) {
-             // Arifiye'ye yakın, hedef Kampüs
              gmapsLink.href = `https://www.google.com/maps/dir/?api=1&origin=${userLat},${userLon}&destination=${LOC_KAMPUS.lat},${LOC_KAMPUS.lon}&travelmode=driving`;
         } else {
-             // Kampüs'e yakın, hedef Arifiye
              gmapsLink.href = `https://www.google.com/maps/dir/?api=1&origin=${userLat},${userLon}&destination=${LOC_ARIFIYE.lat},${LOC_ARIFIYE.lon}&travelmode=driving`;
         }
         gmapsLink.style.display = 'block';
