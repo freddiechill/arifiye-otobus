@@ -164,6 +164,7 @@
         .header-arifiye { background-color: #ef9a9a; } 
         .header-kampus { background-color: #a5d6a7; }
 
+        /* LİSTE GÖRÜNÜMÜ VE SCROLLBAR GİZLEME */
         ul {
             list-style: none;
             padding: 0;
@@ -172,11 +173,17 @@
             flex: 1; 
             position: relative;
             -webkit-overflow-scrolling: touch; 
+            
+            /* Scrollbar Gizleme (Firefox) */
+            scrollbar-width: none; 
+            /* Scrollbar Gizleme (IE/Edge) */
+            -ms-overflow-style: none; 
         }
 
-        ul::-webkit-scrollbar { width: 5px; }
-        ul::-webkit-scrollbar-track { background: #1e1e1e; }
-        ul::-webkit-scrollbar-thumb { background: #444; border-radius: 10px; }
+        /* Scrollbar Gizleme (Chrome/Safari/Opera) */
+        ul::-webkit-scrollbar { 
+            display: none; 
+        }
 
         li {
             padding: 12px;
@@ -249,20 +256,20 @@
         .text-arifiye { color: #ef9a9a; }
         .text-kampus { color: #a5d6a7; }
 
-        /* BAŞLAT/BİTİR BUTONU DÜZENLEMESİ */
+        /* ORTALANMIŞ BAŞLAT/BİTİR BUTONU */
         .start-btn {
             background-color: #4caf50; /* Yeşil */
             color: #000; /* Siyah Yazı */
             border: none;
-            padding: 10px 25px;
+            padding: 12px 30px;
             border-radius: 30px;
             font-weight: 900;
             font-family: 'Satoshi', sans-serif;
             cursor: pointer;
             box-shadow: 0 4px 10px rgba(0,0,0,0.3);
             transition: transform 0.2s, background-color 0.3s;
-            display: block; /* Blok yaparak ortalamaya izin ver */
-            margin: 0 auto 20px auto; /* Ortala ve alt boşluk bırak */
+            display: block; 
+            margin: 0 auto 20px auto;
             font-size: 1rem;
         }
         .start-btn.active { 
@@ -270,6 +277,21 @@
             color: #000; /* Siyah Yazı */
         } 
         .start-btn:active { transform: scale(0.95); }
+        
+        /* GOOGLE MAPS BUTONU */
+        .gmaps-link {
+            display: block;
+            margin: 10px auto;
+            text-align: center;
+            color: #90caf9;
+            text-decoration: none;
+            font-size: 0.9rem;
+            border: 1px solid #333;
+            padding: 8px 15px;
+            border-radius: 20px;
+            width: fit-content;
+            background: rgba(0,0,0,0.3);
+        }
 
         @media (orientation: landscape) {
             .clock-container { margin-bottom: 10px; padding: 5px; margin-top: 10px; }
@@ -365,7 +387,7 @@
             <button id="tripBtn" class="start-btn" onclick="toggleTrip()">Yolculuğu Başlat</button>
 
             <div class="map-visual-container">
-                <div class="map-note">Başlat'a bastığınızda süre hesaplanır</div>
+                <div class="map-note">Konumunuz hat üzerinde gösterilir</div>
                 <div class="route-track-wrapper">
                     <div class="point-label label-arifiye">ARİFİYE</div>
                     <div class="point-label label-kampus">KAMPÜS</div>
@@ -394,6 +416,9 @@
                     <div class="info-value" id="time-kampus">-- dk</div>
                 </div>
             </div>
+            
+            <a id="gmaps-link" href="#" target="_blank" class="gmaps-link" style="display:none;">Google Haritalar'da Aç (Kesin Trafik)</a>
+
         </div>
     </div>
 
@@ -411,7 +436,7 @@
 
     const LOC_ARIFIYE = { lat: 40.7149820, lon: 30.3593559 };
     const LOC_KAMPUS = { lat: 40.7406901, lon: 30.3287539 };
-    const BUS_SPEED_KMH = 30; 
+    
     let prevDistToKampus = null;
     let isTracking = false;
     let watchId = null;
@@ -581,7 +606,7 @@
         const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon/2) * Math.sin(dLon/2); 
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
         
-        const d = R * c * 1.4; // Düzeltme katsayısı (kus uçuşu vs karayolu)
+        const d = R * c * 1.4; 
         return d;
     }
     function deg2rad(deg) { return deg * (Math.PI/180); }
@@ -622,10 +647,8 @@
         document.getElementById('dist-arifiye').innerText = distToArifiye.toFixed(1) + " km";
         document.getElementById('dist-kampus').innerText = distToKampus.toFixed(1) + " km";
         
-        // AKILLI TAHMİN MANTIĞI
+        // AKILLI TAHMİN MANTIĞI (Hız 5'in altındaysa ortalamayı kullan)
         let currentSpeed = position.coords.speed ? (position.coords.speed * 3.6) : 0; // m/s -> km/h
-        
-        // Eğer duruyorsa veya hız verisi yoksa ortalama 35 km/h varsay (15km'yi ~25dk gibi)
         let calcSpeed = currentSpeed;
         if (calcSpeed < 5) calcSpeed = 35; 
 
@@ -634,8 +657,20 @@
 
         document.getElementById('time-arifiye').innerText = timeArifiye + " dk";
         document.getElementById('time-kampus').innerText = timeKampus + " dk";
+        
+        // Google Maps Linkini Güncelle
+        const gmapsLink = document.getElementById('gmaps-link');
+        // En yakın durağa göre hedef belirle
+        if (distToArifiye < distToKampus) {
+             // Arifiye'ye yakın, hedef Kampüs
+             gmapsLink.href = `https://www.google.com/maps/dir/?api=1&origin=${userLat},${userLon}&destination=${LOC_KAMPUS.lat},${LOC_KAMPUS.lon}&travelmode=driving`;
+        } else {
+             // Kampüs'e yakın, hedef Arifiye
+             gmapsLink.href = `https://www.google.com/maps/dir/?api=1&origin=${userLat},${userLon}&destination=${LOC_ARIFIYE.lat},${LOC_ARIFIYE.lon}&travelmode=driving`;
+        }
+        gmapsLink.style.display = 'block';
 
-        // OK KONUMU VE YÖNÜ
+        // OK KONUMU
         let totalDist = distToArifiye + distToKampus;
         let percentage = (distToArifiye / totalDist) * 100;
         
@@ -647,9 +682,8 @@
         const arrowIcon = document.getElementById('userArrowIcon');
         if (prevDistToKampus !== null) {
             const delta = distToKampus - prevDistToKampus;
-            // delta negatifse kampüse yaklaşıyor (Sağa)
             if (delta < -0.005) arrowIcon.style.transform = 'rotate(90deg)'; 
-            else if (delta > 0.005) arrowIcon.style.transform = 'rotate(-90deg)'; // Sola (Arifiye)
+            else if (delta > 0.005) arrowIcon.style.transform = 'rotate(-90deg)';
         }
         prevDistToKampus = distToKampus;
     }
