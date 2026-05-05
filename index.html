@@ -200,31 +200,37 @@
             background-color: rgba(0,0,0,0.96);
             z-index: 1500;
             flex-direction: column;
-            padding: 20px;
+            padding: 10px; /* Daha dar padding */
             padding-top: 80px; 
             box-sizing: border-box;
-            overflow-y: auto;
+            overflow: hidden; /* Sayfa kaymasını engelle, iç kısımlar kaysın */
         }
 
-        .modal-content { width: 100%; max-width: 600px; margin: 0 auto; padding-bottom: 40px; }
-        .modal-title { text-align: center; margin-bottom: 20px; font-size: 1.5rem; color: #fff; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        .modal-content { width: 100%; max-width: 800px; height: 100%; margin: 0 auto; padding-bottom: 20px; display: flex; flex-direction: column; }
+        .modal-title { text-align: center; margin-bottom: 10px; font-size: 1.3rem; color: #fff; border-bottom: 1px solid #333; padding-bottom: 10px; flex-shrink: 0; }
 
         /* TABLO STİLLERİ */
-        .modal-grid-container { display: flex; flex-direction: column; gap: 30px; }
-        .table-section { background: #1e1e1e; border-radius: 10px; border: 1px solid #333; overflow: hidden; flex: 1; }
-        .section-title { background: #333; color: #fff; padding: 10px; text-align: center; font-size: 1.1rem; font-weight: bold; }
-        .timetable-grid { display: grid; grid-template-columns: 1fr 1fr; }
-        .timetable-col { border-right: 1px solid #333; }
+        .modal-grid-container { display: flex; flex-direction: row; gap: 8px; flex: 1; min-height: 0; }
+        .table-section { background: #1e1e1e; border-radius: 10px; border: 1px solid #333; overflow: hidden; flex: 1; display: flex; flex-direction: column; }
+        .section-title { background: #333; color: #fff; padding: 6px; text-align: center; font-size: 0.8rem; font-weight: bold; flex-shrink: 0; }
+        
+        .timetable-grid { display: flex; flex: 1; min-height: 0; }
+        .timetable-col { border-right: 1px solid #333; display: flex; flex-direction: column; flex: 1; min-width: 0; }
         .timetable-col:last-child { border-right: none; }
-        .sub-header { background: #252525; padding: 8px; text-align: center; font-size: 0.9rem; color: #aaa; border-bottom: 1px solid #333; }
-        .time-row { display: block; text-align: center; padding: 8px; font-size: 1rem; border-bottom: 1px solid #2a2a2a; color: #888; }
+        .sub-header { background: #252525; padding: 5px; text-align: center; font-size: 0.7rem; color: #aaa; border-bottom: 1px solid #333; flex-shrink: 0; }
+        
+        /* Modal İçi Kaydırılabilir Alan */
+        .time-list-container { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; -ms-overflow-style: none; }
+        .time-list-container::-webkit-scrollbar { display: none; }
+        
+        .time-row { display: block; text-align: center; padding: 5px; font-size: 0.75rem; border-bottom: 1px solid #2a2a2a; color: #888; }
         .modal-highlight-red { background-color: #ffcccc; color: #b71c1c; font-weight: 900; border-left: 4px solid #b71c1c; }
         .modal-highlight-green { background-color: #dcedc8; color: #33691e; font-weight: 900; border-left: 4px solid #33691e; }
         
         @media (orientation: landscape) {
             .clock-container { margin-bottom: 10px; padding: 5px; margin-top: 10px; }
             .modal-content { max-width: 95% !important; }
-            .modal-grid-container { flex-direction: row; align-items: flex-start; gap: 20px; }
+            .modal-grid-container { gap: 15px; }
             #clock-time { font-size: 1.5rem; }
         }
         @media (min-width: 768px) {
@@ -233,7 +239,11 @@
             .btn-refresh { left: 25px; } 
             .btn-list { right: 25px; }
             .modal-content { max-width: 90% !important; }
-            .modal-grid-container { flex-direction: row; gap: 20px; }
+            .modal-grid-container { gap: 20px; }
+            /* Tablet ve bilgisayarlarda fontları tekrar büyütelim */
+            .time-row { font-size: 1rem; padding: 8px; }
+            .section-title { font-size: 1.1rem; padding: 10px; }
+            .sub-header { font-size: 0.9rem; padding: 8px; }
         }
     </style>
 </head>
@@ -287,15 +297,15 @@
                 <div class="table-section">
                     <div class="section-title">HAFTA İÇİ</div>
                     <div class="timetable-grid">
-                        <div class="timetable-col"><div class="sub-header" style="color:#ef9a9a">Arifiye</div><div id="modal-weekday-arifiye"></div></div>
-                        <div class="timetable-col"><div class="sub-header" style="color:#a5d6a7">Kampüs</div><div id="modal-weekday-kampus"></div></div>
+                        <div class="timetable-col"><div class="sub-header" style="color:#ef9a9a">Arifiye</div><div id="modal-weekday-arifiye" class="time-list-container"></div></div>
+                        <div class="timetable-col"><div class="sub-header" style="color:#a5d6a7">Kampüs</div><div id="modal-weekday-kampus" class="time-list-container"></div></div>
                     </div>
                 </div>
                 <div class="table-section">
                     <div class="section-title">HAFTA SONU</div>
                     <div class="timetable-grid">
-                        <div class="timetable-col"><div class="sub-header" style="color:#ef9a9a">Arifiye</div><div id="modal-weekend-arifiye"></div></div>
-                        <div class="timetable-col"><div class="sub-header" style="color:#a5d6a7">Kampüs</div><div id="modal-weekend-kampus"></div></div>
+                        <div class="timetable-col"><div class="sub-header" style="color:#ef9a9a">Arifiye</div><div id="modal-weekend-arifiye" class="time-list-container"></div></div>
+                        <div class="timetable-col"><div class="sub-header" style="color:#a5d6a7">Kampüs</div><div id="modal-weekend-kampus" class="time-list-container"></div></div>
                     </div>
                 </div>
             </div>
